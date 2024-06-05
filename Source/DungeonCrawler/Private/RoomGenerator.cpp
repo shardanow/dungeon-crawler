@@ -80,7 +80,8 @@ void ARoomGenerator::GenerateRoom()
     // Walls along the length of the room
     for (int i = 0; i <= RoomLength / WallLength; i++) {
         //flag to check that something is spawned on current floor socket
-        bool bSomethingSpawned = false;
+        bool bSomethingSpawnedWall = false;
+        bool bSomethingSpawnedOppositeWall = false;
 
         UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
         FVector WallPosition = Origin + FVector(i * WallLength, 0, 0);
@@ -94,23 +95,23 @@ void ARoomGenerator::GenerateRoom()
         //DrawDebugSphere(GetWorld(), OppositeWallPosition, 20, 12, FColor::Blue, true, -1, 0, 2);
 
         // spawn torches on wall sockets
-        if (!bSomethingSpawned && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
-            bSomethingSpawned = true;
+        if (!bSomethingSpawnedWall && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
+            bSomethingSpawnedWall = true;
         }
-
-        if (!bSomethingSpawned && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
-            bSomethingSpawned = true;
+        
+        if (!bSomethingSpawnedOppositeWall && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
+            bSomethingSpawnedOppositeWall = true;
         }
 
         //spawn wall decoration on wall socket
-        if (!bSomethingSpawned && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], WallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
+        if (!bSomethingSpawnedWall && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], WallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
             DecoratedWallPositions.Add(WallPosition);
-            bSomethingSpawned = true;
+            bSomethingSpawnedWall = true;
         }
 
-        if (!bSomethingSpawned && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], OppositeWallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
+        if (!bSomethingSpawnedOppositeWall && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], OppositeWallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
             DecoratedWallPositions.Add(OppositeWallPosition);
-            bSomethingSpawned = true;
+            bSomethingSpawnedOppositeWall = true;
         }
     }
 
@@ -118,7 +119,8 @@ void ARoomGenerator::GenerateRoom()
     // Walls along the width of the room
     for (int j = 0; j <= RoomWidth / WallLength; j++) {
         //flag to check that something is spawned on current wall socket name
-        bool bSomethingSpawned = false;
+        bool bSomethingSpawnedWall = false;
+        bool bSomethingSpawnedOppositeWall = false;
 
         UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
         FVector WallPosition = Origin + FVector(0, j * WallLength + WallLength, 0); // Subtracting one WallLength
@@ -131,23 +133,23 @@ void ARoomGenerator::GenerateRoom()
         //DrawDebugSphere(GetWorld(), OppositeWallPosition, 20, 12, FColor::Green, true, -1, 0, 2);
 
         // spawn torches on wall sockets
-        if (!bSomethingSpawned && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
-            bSomethingSpawned = true;
+        if (!bSomethingSpawnedWall && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
+            bSomethingSpawnedWall = true;
         }
 
-        if (!bSomethingSpawned && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
-            bSomethingSpawned = true;
+        if (!bSomethingSpawnedOppositeWall && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center")) {
+            bSomethingSpawnedOppositeWall = true;
         }
 
         //spawn wall decoration on wall socket
-        if (!bSomethingSpawned && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], WallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
+        if (!bSomethingSpawnedWall && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], WallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
             DecoratedWallPositions.Add(WallPosition);
-            bSomethingSpawned = true;
+            bSomethingSpawnedWall = true;
         }
 
-        if (!bSomethingSpawned && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], OppositeWallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
+        if (!bSomethingSpawnedOppositeWall && SpawnMeshOnExistingMeshWallSocket(WallDecorationMeshes[FMath::RandRange(0, WallDecorationMeshes.Num() - 1)], OppositeWallMeshComponent, WallDecorationSpawnChance, "wall_bottom_center")) {
             DecoratedWallPositions.Add(OppositeWallPosition);
-            bSomethingSpawned = true;
+            bSomethingSpawnedOppositeWall = true;
         }
     }
 
@@ -170,22 +172,37 @@ void ARoomGenerator::GenerateRoom()
 
                 UStaticMesh* SelectedPillarMesh = FloorPillarsMeshes[FMath::RandRange(0, FloorPillarsMeshes.Num() - 1)];
 
+                int Margin = 0;
+                // Check that the current position is not near the wall boundaries
+                if (m > Margin && m < NumWallsLength - Margin - 1 && n > Margin && n < NumWallsWidth - Margin - 1) {
+                    // Calculate the interval for placing pillars to distribute them evenly
+                    int PillarIntervalLength = FMath::Max(1, (NumWallsLength - 2 * Margin) / 2);
+                    int PillarIntervalWidth = FMath::Max(1, (NumWallsWidth - 2 * Margin) / 2);
+                    // Check if we are at a calculated interval for a pillar
+                    if ((m - Margin) % PillarIntervalLength == PillarIntervalLength / 2 &&
+                        (n - Margin) % PillarIntervalWidth == PillarIntervalWidth / 2) {
+
+                        //spawn pillars on floor socket
+                        if (!bSomethingSpawned && SpawnMeshOnExistingMeshFloorSocket(SelectedPillarMesh, FloorMeshComponent, 100, "spawn_center_point")) {
+                            //draw debug sphere
+                           // DrawDebugSphere(GetWorld(), FloorPosition, 20, 12, FColor::Red, true, -1, 0, 2);
+
+                            bSomethingSpawned = true;
+                        }
+                    }
+                }
+
                 // Spawn treasure on floor socket
-                if (FloorMeshes[0] && TreasureBlueprints.Num() > 0 && !bSomethingSpawned) {
-                    bSomethingSpawned = SpawnActorOnSocket(TreasureBlueprints[FMath::RandRange(0, TreasureBlueprints.Num() - 1)], FloorMeshComponent, TreasureSpawnChance, "spawn_center_point");
+                if (!bSomethingSpawned && SpawnActorOnSocket(TreasureBlueprints[FMath::RandRange(0, TreasureBlueprints.Num() - 1)], FloorMeshComponent, TreasureSpawnChance, "spawn_center_point")) {
+                    bSomethingSpawned = true;
                 }
 
                 // Spawn enemies on floor socket
-                if (FloorMeshes[0] && EnemyBlueprints.Num() > 0 && !bSomethingSpawned) {
-                    bSomethingSpawned = SpawnActorOnSocket(EnemyBlueprints[FMath::RandRange(0, EnemyBlueprints.Num() - 1)], FloorMeshComponent, EnemySpawnChance, "spawn_center_point");
+                if (!bSomethingSpawned && SpawnActorOnSocket(EnemyBlueprints[FMath::RandRange(0, EnemyBlueprints.Num() - 1)], FloorMeshComponent, EnemySpawnChance, "spawn_center_point")) {
+                    bSomethingSpawned = true;
                 }
 
-                if (!IsNearDecoratedWall(FloorPosition, FloorLength)) {
-                    //spawn pillars on floor socket
-                    if ((FloorPillarsMeshes[0] && FloorPillarsMeshes.Num() > 0) && !bSomethingSpawned) {
-                        bSomethingSpawned = SpawnMeshOnExistingMeshFloorSocket(SelectedPillarMesh, FloorMeshComponent, FloorPillarsSpawnChance, "spawn_center_point");
-                    }
-                }
+
             }
         }
     }
@@ -341,13 +358,24 @@ bool ARoomGenerator::SpawnMeshOnExistingMeshWallSocket(UStaticMesh* NewMesh, USt
     return spawnedFlag;
 }
 
-bool ARoomGenerator::IsNearDecoratedWall(FVector FloorPosition, float proximityDistance) 
+bool ARoomGenerator::IsFloorCellNearWall(int32 NumWallsLength, int32 NumWallsWidth, FVector FloorPosition, float horizontalProximity)
 {
-    for (const FVector& WallPos : DecoratedWallPositions) {
-        if (FVector::Dist2D(FloorPosition, WallPos) <= proximityDistance) {
-            return true;
-        }
+    FVector RoomOrigin = GetActorLocation(); // Assuming this is the bottom-left corner of the room
+    float RoomLength = NumWallsLength * FloorLength; // Total length of the room
+    float RoomWidth = NumWallsWidth * FloorWidth; // Total width of the room
+
+    // Calculate the edges of the room
+    float LeftEdge = RoomOrigin.X;
+    float RightEdge = RoomOrigin.X + RoomLength;
+    float BottomEdge = RoomOrigin.Y;
+    float TopEdge = RoomOrigin.Y + RoomWidth;
+
+    // Check proximity to each wall
+    if (FloorPosition.X - LeftEdge <= horizontalProximity || RightEdge - FloorPosition.X <= horizontalProximity ||
+        FloorPosition.Y - BottomEdge <= horizontalProximity || TopEdge - FloorPosition.Y <= horizontalProximity) {
+        return true;
     }
+
     return false;
 }
 

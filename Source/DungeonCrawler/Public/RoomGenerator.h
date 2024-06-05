@@ -119,7 +119,7 @@ public:
     bool SpawnMeshOnExistingMeshFloorSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName);
     bool SpawnMeshOnExistingMeshWallSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName);
 
-    bool IsNearDecoratedWall(FVector FloorPosition, float proximityDistance);
+    bool IsFloorCellNearWall(int32 NumWallsLength, int32 NumWallsWidth, FVector FloorPosition, float horizontalProximity);
 
     void AddPlayerStart(FVector Location);
 
