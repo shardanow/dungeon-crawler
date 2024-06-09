@@ -9,6 +9,8 @@
 #include "InputMappingContext.h"
 #include "NavigationSystem.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
+#include <EnemyCharacter.h>
+#include <Kismet/GameplayStatics.h>
 #include "CustomPlayerController.generated.h"
 
 // Event to notify AIController about the clicked location
@@ -47,14 +49,23 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input", meta = (AllowPrivateAccess = "true"))
     float PathUpdateCooldownLimiter = 0.3f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input", meta = (AllowPrivateAccess = "true"))
+    bool bCanMove = true;
+
     bool bIsMouseButtonDown;
     TArray<FVector> CurrentPathPoints;
     int32 CurrentPathIndex = 0;
     UNavigationSystemV1* NavSys = nullptr;
     float DistanceThreshold = 100.0f;
+    float AttackDistance = 150.0f;
+    float AttackCooldown = 1.5f;
+    float LastAttackTime = 0.0f;
+    float Damage = 30.0f;
 
     void OnMousePressed();
     void OnMouseReleased();
     void UpdateMovementDestination();
     void MoveToLocation(const FVector& Location);
+    void DamageEnemyUnderCursor();
+    void RotateToEnemy(AEnemyCharacter* Enemy);
 };

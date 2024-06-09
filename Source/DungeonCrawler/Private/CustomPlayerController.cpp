@@ -41,6 +41,31 @@ void ACustomPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
 
+
+    // Continuously check if cursor is still on an enemy
+    FHitResult Hit;
+    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+    {
+        AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Hit.GetActor());
+        if (Enemy && bIsMouseButtonDown)
+        {
+            float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
+            if (Distance <= AttackDistance)
+            {
+                DamageEnemyUnderCursor();
+                // Stop movement here if necessary
+                if (APawn* ControlledPawn = GetPawn())
+                {
+                   //stop movement
+					UAIBlueprintHelperLibrary::SimpleMoveToLocation(ControlledPawn->GetController(), ControlledPawn->GetActorLocation());
+                    RotateToEnemy(Enemy);
+                }
+                return;  // Skip movement updates
+            }
+        }
+    }
+
+
     if (bIsMouseButtonDown && CanUpdatePath(DeltaTime))
     {
         UpdateMovementDestination();
@@ -110,9 +135,25 @@ void ACustomPlayerController::OnMousePressed()
 {
     //debud on screen
   //  GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Mouse Pressed"));
-
     bIsMouseButtonDown = true;
-    UpdateMovementDestination();
+
+    FHitResult Hit;
+    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit) && Hit.bBlockingHit)
+    {
+        AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Hit.GetActor());
+        if (Enemy)
+        {
+            float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
+            if (Distance <= AttackDistance)
+            {
+                DamageEnemyUnderCursor();  // Call damage function directly if in range
+                return;  // Do not initiate movement if attacking
+            }
+        }
+
+        UpdateMovementDestination();
+    }
+
 }
 
 void ACustomPlayerController::OnMouseReleased()
@@ -186,4 +227,55 @@ void ACustomPlayerController::MoveToLocation(const FVector& Location)
             }
         }
     }
+}
+
+// add damage to enemy under cursor
+void ACustomPlayerController::DamageEnemyUnderCursor()
+{
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+    if (CurrentTime < LastAttackTime + AttackCooldown)
+    {
+        //debug on screen
+       // GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Attack on cooldown"));
+
+        return; // Skip this call since we're still in cooldown
+    }
+
+	FHitResult Hit;
+	bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+
+	if (bHit)
+	{
+		AActor* HitActor = Hit.GetActor();
+		if (HitActor)
+		{
+			AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(HitActor);
+			if (Enemy)
+			{
+				// Apply damage to the enemy  only if enemy actor is near player
+                float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
+                if (Distance <= AttackDistance) // Adjust this distance as needed
+                {
+                    // Clear any existing movement path points to stop movement
+                    CurrentPathPoints.Empty(); 
+
+                    // Apply damage to the enemy
+                    UGameplayStatics::ApplyDamage(Enemy, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
+
+                    // Apply damage to the enemy only if the enemy actor is near the player
+                    LastAttackTime = CurrentTime; // Update last attack time
+                }
+			}
+		}
+	}
+}
+
+//rotate player to enemy smoothly only on z axis
+void ACustomPlayerController::RotateToEnemy(AEnemyCharacter* Enemy)
+{
+	FRotator NewRotation = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).ToOrientationRotator();
+	FRotator CurrentRotation = GetPawn()->GetActorRotation();
+	FRotator TargetRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
+	FRotator SmoothRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), 8.0f); // Adjust 8.0f to control rotation speed
+	GetPawn()->SetActorRotation(SmoothRotation);
 }
