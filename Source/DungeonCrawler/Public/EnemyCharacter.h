@@ -15,6 +15,20 @@ public:
 	// Sets default values for this character's properties
 	AEnemyCharacter();
 
+	// is the enemy dead
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Enemy")
+	bool bIsDeadState;
+
+	// Getter for bIsDead
+	// ufunction is used to make the function available to Blueprints
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	bool IsDeadState() const { return bIsDeadState; }
+
+	// Setter for bIsDead
+	// ufunction is used to make the function available to Blueprints
+	UFUNCTION(BlueprintCallable, Category = "Enemy")
+	void SetIsDeadState(bool IsDead) { bIsDeadState = IsDead; }
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

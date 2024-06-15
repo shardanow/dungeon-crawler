@@ -2,6 +2,7 @@
 
 
 #include "CustomPlayerController.h"
+#include "PlayerCharacter.h"
 
 ACustomPlayerController::ACustomPlayerController()
 {
@@ -18,10 +19,12 @@ void ACustomPlayerController::BeginPlay()
     bEnableMouseOverEvents = true;
 
     // Add Input Mapping Context to Enhanced Input System
-    UEnhancedInputLocalPlayerSubsystem* InputSubsystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-    if (InputSubsystem && InputMappingContext)
+    if (UEnhancedInputLocalPlayerSubsystem* InputSubsystem = GetLocalPlayer()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
     {
-        InputSubsystem->AddMappingContext(InputMappingContext, 1); // 1 is the priority level
+        if (InputMappingContext)
+        {
+            InputSubsystem->AddMappingContext(InputMappingContext, 1); // 1 is the priority level
+        }
     }
 }
 
@@ -29,11 +32,25 @@ void ACustomPlayerController::SetupInputComponent()
 {
     Super::SetupInputComponent();
 
-    UEnhancedInputComponent* EnhancedInputComp = Cast<UEnhancedInputComponent>(InputComponent);
-    if (EnhancedInputComp && InputMappingContext)
-	{
-        EnhancedInputComp->BindAction(Move, ETriggerEvent::Started, this, &ACustomPlayerController::OnMousePressed);
-        EnhancedInputComp->BindAction(Move, ETriggerEvent::Completed, this, &ACustomPlayerController::OnMouseReleased);
+    if (UEnhancedInputComponent* EnhancedInputComp = Cast<UEnhancedInputComponent>(InputComponent))
+    {
+        if (InputMappingContext)
+        {
+            EnhancedInputComp->BindAction(Move, ETriggerEvent::Started, this, &ACustomPlayerController::OnMousePressed);
+            EnhancedInputComp->BindAction(Move, ETriggerEvent::Ongoing, this, &ACustomPlayerController::OnMouseHeld);
+            EnhancedInputComp->BindAction(Move, ETriggerEvent::Completed, this, &ACustomPlayerController::OnMouseReleased);
+        }
+    }
+}
+
+void ACustomPlayerController::HandleAnimationNotify(FName NotifyName)
+{
+    if (NotifyName == "AttackHitPlayerMale")
+    {
+        // Debug on screen
+        GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("AttackHitPlayerMale Anim Event Triggered"));
+        // Apply damage to enemy under cursor
+        ApplyDamageToEnemyActor(LockedEnemy, Damage);
     }
 }
 
@@ -41,36 +58,60 @@ void ACustomPlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
 
-
-    // Continuously check if cursor is still on an enemy
-    FHitResult Hit;
-    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+    if (bIsMouseButtonDown)
     {
-        AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Hit.GetActor());
-        if (Enemy && bIsMouseButtonDown)
+        HandleMouseInteraction(); // Continuously handle mouse interaction while button is down
+    }
+
+    if (LockedEnemy)
+    {
+        //debug on screen sphere where the enemy is
+        DrawDebugSphere(GetWorld(), LockedEnemy->GetActorLocation(), 25.0f, 12, FColor::Blue, false, 0.5f);
+
+        float Distance = (LockedEnemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
+        if (Distance <= AttackDistance)
         {
-            float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
-            if (Distance <= AttackDistance)
-            {
-                DamageEnemyUnderCursor();
-                // Stop movement here if necessary
-                if (APawn* ControlledPawn = GetPawn())
-                {
-                   //stop movement
-					UAIBlueprintHelperLibrary::SimpleMoveToLocation(ControlledPawn->GetController(), ControlledPawn->GetActorLocation());
-                    RotateToEnemy(Enemy);
-                }
-                return;  // Skip movement updates
-            }
+            //debug on screen attack distance sphere
+            DrawDebugSphere(GetWorld(), LockedEnemy->GetActorLocation(), AttackDistance, 12, FColor::Red, false, 0.5f);
+
+            RotateToEnemy(LockedEnemy);
+            AttackTargetEnemy();
+        }
+        else
+        {
+            //debug on screen move to location
+            DrawDebugSphere(GetWorld(), LockedEnemy->GetActorLocation(), 25.0f, 12, FColor::Yellow, false, 0.5f);
+
+            RotateToEnemy(LockedEnemy);
+            MoveToLocation(LockedEnemy->GetActorLocation());
+
+            //move along the path
+            MoveAlongPath(DeltaTime);
+        }
+        return;
+    }
+
+    // If there is a valid hit location, move towards it
+    if (!CurrentHitLocation.IsZero())
+    {
+        if (CanUpdatePath(DeltaTime))
+        {
+            MoveToLocation(CurrentHitLocation);
         }
     }
 
+    //debug on screen path points
+    for (int32 i = 0; i < CurrentPathPoints.Num(); i++)
+	{
+		DrawDebugSphere(GetWorld(), CurrentPathPoints[i], 25.0f, 12, FColor::Black, false, 0.5f);
+	}
 
-    if (bIsMouseButtonDown && CanUpdatePath(DeltaTime))
-    {
-        UpdateMovementDestination();
-    }
+    //move along the path
+    MoveAlongPath(DeltaTime);
+}
 
+void ACustomPlayerController::MoveAlongPath(float DeltaTime)
+{
     if (CurrentPathPoints.Num() > 0 && CurrentPathIndex < CurrentPathPoints.Num())
     {
         APawn* ControlledPawn = GetPawn();
@@ -80,36 +121,15 @@ void ACustomPlayerController::PlayerTick(float DeltaTime)
             FVector PawnLocation = ControlledPawn->GetActorLocation();
             float Distance = (NextPoint - PawnLocation).Size();
 
-            // Consider a small threshold for reaching the point to avoid precision issues
-            //float DistanceThreshold = 100.0f; // Adjust this threshold as needed for your game
-
-
-            //check if point reachability
-   //         FHitResult Hit;
-   //         bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, PawnLocation, NextPoint, ECC_Visibility);
-   //         if (bHit)
-			//{
-			//	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Next point is not reachable"));
-			//	return;
-			//}
-
-            if (Distance >= DistanceThreshold) // Check if pawn is close enough to consider it at the point
+            if (Distance >= DistanceThreshold)
             {
-                DrawDebugSphere(GetWorld(), NextPoint, 25.0f, 12, FColor::Green, false, 3.0f);
+                DrawDebugSphere(GetWorld(), NextPoint, 25.0f, 12, FColor::Green, false, 0.5f);
 
-                // Calculate direction vector and convert to rotation
-                FVector Direction = (NextPoint - PawnLocation).GetSafeNormal();  // Normalize to get direction
-                FRotator NewRotation = Direction.ToOrientationRotator();
-
-                // Retrieve the current rotation and replace only the yaw component
-                FRotator CurrentRotation = ControlledPawn->GetActorRotation();
-                FRotator TargetRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
-
-                // Optionally, smooth the rotation over time
-                FRotator SmoothRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 5.0f); // Adjust 5.0f to control rotation speed
+                FVector Direction = (NextPoint - PawnLocation).GetSafeNormal();
+                FRotator TargetRotation = FRotator(0.0f, Direction.ToOrientationRotator().Yaw, 0.0f);
+                FRotator SmoothRotation = FMath::RInterpTo(ControlledPawn->GetActorRotation(), TargetRotation, DeltaTime, 5.0f);
 
                 ControlledPawn->SetActorRotation(SmoothRotation);
-
                 UAIBlueprintHelperLibrary::SimpleMoveToLocation(ControlledPawn->GetController(), NextPoint);
             }
             else
@@ -133,60 +153,78 @@ bool ACustomPlayerController::CanUpdatePath(float DeltaTime)
 
 void ACustomPlayerController::OnMousePressed()
 {
-    //debud on screen
-  //  GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Mouse Pressed"));
     bIsMouseButtonDown = true;
+    HandleMouseInteraction();  // Handle initial click
 
-    FHitResult Hit;
-    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit) && Hit.bBlockingHit)
+    // Immediately update path on click
+    if (!CurrentHitLocation.IsZero())
     {
-        AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(Hit.GetActor());
-        if (Enemy)
-        {
-            float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
-            if (Distance <= AttackDistance)
-            {
-                DamageEnemyUnderCursor();  // Call damage function directly if in range
-                return;  // Do not initiate movement if attacking
-            }
-        }
-
-        UpdateMovementDestination();
+        MoveToLocation(CurrentHitLocation);
     }
 
+    LockedEnemy = nullptr;  // Clear the lock on mouse release
+    CurrentHitLocation = FVector::ZeroVector; // Clear the current hit location
+}
+
+void ACustomPlayerController::OnMouseHeld()
+{
+    if (bIsMouseButtonDown)
+    {
+        HandleMouseInteraction();  // Handle continuous updates while holding
+    }
 }
 
 void ACustomPlayerController::OnMouseReleased()
 {
-    //debud on screen
-  //  GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Mouse Released"));
-
     bIsMouseButtonDown = false;
+    
+}
+
+void ACustomPlayerController::HandleMouseInteraction()
+{
+    UpdateLockedEnemyOrDestination();
+}
+
+void ACustomPlayerController::UpdateLockedEnemyOrDestination()
+{
+    OnPlayerAttack.Broadcast(false);
+
+    FHitResult Hit;
+    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit) && Hit.bBlockingHit)
+    {
+        AEnemyCharacter* HitEnemy = Cast<AEnemyCharacter>(Hit.GetActor());
+        if (HitEnemy)
+        {
+            float Distance = (HitEnemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
+            if (Distance <= AttackDistance)
+            {
+                CurrentPathPoints.Empty();
+                LockedEnemy = HitEnemy;
+                AttackTargetEnemy();
+            }
+            else
+            {
+                LockedEnemy = HitEnemy;
+                MoveToLocation(HitEnemy->GetActorLocation());
+            }
+        }
+        else
+        {
+            LockedEnemy = nullptr;
+            CurrentHitLocation = Hit.Location; // Store the current hit location
+        }
+    }
 }
 
 void ACustomPlayerController::UpdateMovementDestination()
 {
-   // GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("UpdateMovementDestination called"));
-
-    // Get the mouse cursor position
+    EnemyUnderCursor = nullptr;
     FHitResult Hit;
-    bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, Hit);
-
-    if (bHit)
+    if (GetHitResultUnderCursor(ECC_Visibility, false, Hit) && Hit.bBlockingHit)
     {
         FVector HitLocation = Hit.Location;
-
-        DrawDebugSphere(GetWorld(), HitLocation, 25.0f, 12, FColor::Red, false, 3.0f);
-
-        if (Hit.bBlockingHit)
-        {
-            // We hit something, move player here
-            APawn* MyPawn = GetPawn();
-            if (MyPawn)
-            {
-                MoveToLocation(HitLocation);
-            }
-        }
+        DrawDebugSphere(GetWorld(), HitLocation, 25.0f, 12, FColor::Red, false, 0.5f);
+        CurrentHitLocation = HitLocation; // Update the current hit location
     }
     else
     {
@@ -196,86 +234,106 @@ void ACustomPlayerController::UpdateMovementDestination()
 
 void ACustomPlayerController::MoveToLocation(const FVector& Location)
 {
-    APawn* ControlledPawn = GetPawn();
-    if (ControlledPawn)
+    if (APawn* ControlledPawn = GetPawn())
     {
         NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
         if (NavSys)
         {
-            FPathFindingQuery Query;
-            FNavPathSharedPtr NavPath;
             const ANavigationData* NavData = NavSys->GetDefaultNavDataInstance(FNavigationSystem::ECreateIfEmpty::Create);
-
             if (NavData)
             {
-                Query = FPathFindingQuery(ControlledPawn, *NavData, ControlledPawn->GetActorLocation(), Location);
-                
+                FPathFindingQuery Query(ControlledPawn, *NavData, ControlledPawn->GetActorLocation(), Location);
                 FPathFindingResult Result = NavSys->FindPathSync(Query);
 
                 if (Result.IsSuccessful() && Result.Path.IsValid())
                 {
-                    CurrentPathPoints.Empty(); // Clear any existing points
+                    CurrentPathPoints.Empty();
                     for (const FNavPathPoint& PathPoint : Result.Path->GetPathPoints())
                     {
-                        //debug path points
-                       // DrawDebugSphere(GetWorld(), PathPoint.Location, 25.0f, 12, FColor::Yellow, false, 3.0f);
-
-                        CurrentPathPoints.Add(PathPoint.Location);
+                        // Skip the first point if it's the current location of the player
+                        if (!PathPoint.Location.Equals(ControlledPawn->GetActorLocation(), DistanceThreshold))
+                        {
+                            CurrentPathPoints.Add(PathPoint.Location);
+                        }
                     }
-                    CurrentPathIndex = 0; // Reset path index
+                    CurrentPathIndex = 0;
                 }
             }
         }
     }
 }
 
-// add damage to enemy under cursor
-void ACustomPlayerController::DamageEnemyUnderCursor()
+void ACustomPlayerController::RotateToEnemy(AEnemyCharacter* Enemy)
+{
+    FRotator NewRotation = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).ToOrientationRotator();
+    FRotator TargetRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
+    FRotator SmoothRotation = FMath::RInterpTo(GetPawn()->GetActorRotation(), TargetRotation, GetWorld()->GetDeltaSeconds(), 8.0f);
+    GetPawn()->SetActorRotation(SmoothRotation);
+}
+
+void ACustomPlayerController::ApplyDamageToEnemyActor(AEnemyCharacter* EnemyTarget, float DamageAmount)
+{
+    if (EnemyTarget)
+    {
+        UGameplayStatics::ApplyDamage(EnemyTarget, DamageAmount, GetInstigatorController(), this, UDamageType::StaticClass());
+    }
+}
+
+void ACustomPlayerController::AttackTargetEnemy()
 {
     float CurrentTime = GetWorld()->GetTimeSeconds();
     if (CurrentTime < LastAttackTime + AttackCooldown)
     {
-        //debug on screen
-       // GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Attack on cooldown"));
+        //debug on screen attack cooldown message
+        //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Attack Cooldown"));
 
+        OnPlayerAttack.Broadcast(false);
         return; // Skip this call since we're still in cooldown
     }
 
-	FHitResult Hit;
-	bool bHit = GetHitResultUnderCursor(ECC_Visibility, false, Hit);
+    //debug on screen try to hit enemy message
+    //GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Trying to hit enemy"));
 
-	if (bHit)
-	{
-		AActor* HitActor = Hit.GetActor();
-		if (HitActor)
-		{
-			AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(HitActor);
-			if (Enemy)
-			{
-				// Apply damage to the enemy  only if enemy actor is near player
-                float Distance = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).Size();
-                if (Distance <= AttackDistance) // Adjust this distance as needed
+
+    // Check if the enemy is within attack distance
+    //FHitResult Hit;
+    //if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+    //{
+    //    if (AActor* HitActor = Hit.GetActor())
+    //    {
+           // EnemyUnderCursor = Cast<AEnemyCharacter>(HitActor);
+            if (LockedEnemy && !LockedEnemy->IsDeadState())
+            {
+                float SquaredDistance = (LockedEnemy->GetActorLocation() - GetPawn()->GetActorLocation()).SizeSquared();
+                if (SquaredDistance <= FMath::Square(AttackDistance))
                 {
-                    // Clear any existing movement path points to stop movement
-                    CurrentPathPoints.Empty(); 
+                    RotateToEnemy(LockedEnemy);
 
-                    // Apply damage to the enemy
-                    UGameplayStatics::ApplyDamage(Enemy, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
-
-                    // Apply damage to the enemy only if the enemy actor is near the player
-                    LastAttackTime = CurrentTime; // Update last attack time
+                    if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetPawn()))
+                    {
+                        if (!PlayerCharacter->IsDamaged())
+                        {
+                            CurrentPathPoints.Empty();
+                            OnPlayerAttack.Broadcast(true);
+                            LastAttackTime = CurrentTime;
+                            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Enemy Hit Triggered"));
+                        }
+                    }
                 }
+               /* else
+                {
+                    EnemyUnderCursor = nullptr;
+                }*/
+            }
+			else
+			{
+				LockedEnemy = nullptr;
 			}
-		}
-	}
-}
-
-//rotate player to enemy smoothly only on z axis
-void ACustomPlayerController::RotateToEnemy(AEnemyCharacter* Enemy)
-{
-	FRotator NewRotation = (Enemy->GetActorLocation() - GetPawn()->GetActorLocation()).ToOrientationRotator();
-	FRotator CurrentRotation = GetPawn()->GetActorRotation();
-	FRotator TargetRotation = FRotator(0.0f, NewRotation.Yaw, 0.0f);
-	FRotator SmoothRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), 8.0f); // Adjust 8.0f to control rotation speed
-	GetPawn()->SetActorRotation(SmoothRotation);
+        //}
+       /* else
+        {
+            EnemyUnderCursor = nullptr;
+        }*/
+    //}
+    OnPlayerAttack.Broadcast(false);
 }
