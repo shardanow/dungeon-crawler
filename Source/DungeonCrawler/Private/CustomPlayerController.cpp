@@ -250,10 +250,21 @@ void ACustomPlayerController::MoveToLocation(const FVector& Location)
                     CurrentPathPoints.Empty();
                     for (const FNavPathPoint& PathPoint : Result.Path->GetPathPoints())
                     {
-                        // Skip the first point if it's the current location of the player
-                        if (!PathPoint.Location.Equals(ControlledPawn->GetActorLocation(), DistanceThreshold))
-                        {
-                            CurrentPathPoints.Add(PathPoint.Location);
+
+                        // Skip the first point if it's the current location of the player and ignore points that same coordinates
+                        if (!PathPoint.Location.Equals(ControlledPawn->GetActorLocation(), DistanceThreshold)
+                            &&
+                            (FMath::Abs(PathPoint.Location.X - ControlledPawn->GetActorLocation().X) > KINDA_SMALL_NUMBER ||
+                                FMath::Abs(PathPoint.Location.Y - ControlledPawn->GetActorLocation().Y) > KINDA_SMALL_NUMBER)
+                            )
+						{
+							CurrentPathPoints.Add(PathPoint.Location);
+
+                            //debug sphere on screen for path points
+                           // DrawDebugSphere(GetWorld(), PathPoint.Location, 25.0f, 12, FColor::Blue, false, 0.5f);
+						}
+                        else {
+                           continue;
                         }
                     }
                     CurrentPathIndex = 0;

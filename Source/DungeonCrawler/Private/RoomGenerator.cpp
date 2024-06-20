@@ -36,7 +36,7 @@ ARoomGenerator::ARoomGenerator()
     WallTorchesSpawnChance = 10;
     WallDecorationSpawnChance = 10;
     FloorPillarsSpawnChance = 5;
-    FloorDecorationSpawnChance = 2;
+    FloorDecorationSpawnChance = 15;
 }
 
 // Called when the game starts or when spawned
@@ -182,8 +182,14 @@ void ARoomGenerator::GenerateRoom()
                     if ((m - Margin) % PillarIntervalLength == PillarIntervalLength / 2 &&
                         (n - Margin) % PillarIntervalWidth == PillarIntervalWidth / 2) {
 
+                        //pillar mesh component
+                        UStaticMeshComponent* PillarMeshComponent = SpawnMeshOnExistingMeshFloorSocket(SelectedPillarMesh, FloorMeshComponent, 100, "spawn_center_point", "IgnoreCamera");
+                        
+                        //spawn torches on pillar sockets
+                        SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], PillarMeshComponent, 100, "pillar_center_left", "IgnoreCamera");
+
                         //spawn pillars on floor socket
-                        if (!bSomethingSpawned && SpawnMeshOnExistingMeshFloorSocket(SelectedPillarMesh, FloorMeshComponent, 100, "spawn_center_point")) {
+                        if (!bSomethingSpawned && PillarMeshComponent) {
                             //draw debug sphere
                            // DrawDebugSphere(GetWorld(), FloorPosition, 20, 12, FColor::Red, true, -1, 0, 2);
 
@@ -191,6 +197,15 @@ void ARoomGenerator::GenerateRoom()
                         }
                     }
                 }
+
+                //get random socket name from the array
+                TArray<FName> FloorDecorationSocketNames = { "spawn_center_point", "spawn_corner_left_top_point", "spawn_corner_right_top_point", "spawn_corner_left_bottom_point", "spawn_corner_right_bottom_point" };
+                FName RandomDecorationSocketName = FloorDecorationSocketNames[FMath::RandRange(0, FloorDecorationSocketNames.Num() - 1)];
+
+                //spawn floor decoration on floor socket
+                if (!bSomethingSpawned && SpawnMeshOnExistingMeshFloorSocket(FloorDecorationMeshes[FMath::RandRange(0, FloorDecorationMeshes.Num() - 1)], FloorMeshComponent, FloorDecorationSpawnChance, RandomDecorationSocketName)) {
+					bSomethingSpawned = true;
+				}
 
                 // Spawn treasure on floor socket
                 if (!bSomethingSpawned && SpawnActorOnSocket(TreasureBlueprints[FMath::RandRange(0, TreasureBlueprints.Num() - 1)], FloorMeshComponent, TreasureSpawnChance, "spawn_center_point")) {
@@ -201,7 +216,6 @@ void ARoomGenerator::GenerateRoom()
                 if (!bSomethingSpawned && SpawnActorOnSocket(EnemyBlueprints[FMath::RandRange(0, EnemyBlueprints.Num() - 1)], FloorMeshComponent, EnemySpawnChance, "spawn_center_point")) {
                     bSomethingSpawned = true;
                 }
-
 
             }
         }
@@ -258,56 +272,61 @@ UStaticMeshComponent* ARoomGenerator::SpawnMesh(UStaticMesh* Mesh, FVector Locat
 }
 
 
-bool ARoomGenerator::SpawnActorOnSocket(TSubclassOf<AActor> ActorClass, UStaticMeshComponent* Mesh, float SpawnChance, FName SocketName)
+bool ARoomGenerator::SpawnActorOnSocket(TSubclassOf<AActor> ActorClass, UStaticMeshComponent* Mesh, float SpawnChance, FName SocketName, FName CollisionPresetName)
 {
     bool spawnedFlag = false;
 
     if (FMath::FRand() <= SpawnChance / 100.f) {
         FName SpawnSocket = SocketName; // Example socket, choose randomly as needed
+
+        // Check if the socket exists
+        if (!Mesh->DoesSocketExist(SpawnSocket)) {
+			return false;
+		}
+
         FVector SpawnLocation = Mesh->GetSocketLocation(SpawnSocket);
         FRotator SpawnRotation = Mesh->GetSocketRotation(SpawnSocket);
-        GetWorld()->SpawnActor<AActor>(ActorClass, SpawnLocation, SpawnRotation);
+        // Spawn the actor
+        AActor* NewActor = GetWorld()->SpawnActor<AActor>(ActorClass, SpawnLocation, SpawnRotation);
         spawnedFlag = true;
     }
 
     return spawnedFlag;
 }
 
-bool ARoomGenerator::SpawnMeshOnExistingMeshFloorSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName)
+UStaticMeshComponent* ARoomGenerator::SpawnMeshOnExistingMeshFloorSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName, FName CollisionPresetName)
 {
-    bool spawnedFlag = false;
+    //bool spawnedFlag = false;
 
     if (!ExistingMeshComponent || !NewMesh)
     {
-        return false; // Validation to ensure there is an existing mesh component and a mesh to attach
+        return nullptr; // Validation to ensure there is an existing mesh component and a mesh to attach
     }
+
+
+    UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
 
     // Create a new static mesh component dynamically
     if (FMath::FRand() <= SpawnChance / 100.f) {
-        UStaticMeshComponent* NewMeshComponent = NewObject<UStaticMeshComponent>(this);
-
-
         if (NewMeshComponent)
         {
             NewMeshComponent->SetStaticMesh(NewMesh); // Assign the new mesh
 
             //set collision
             NewMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-            NewMeshComponent->SetCollisionProfileName("BlockAll");
+            NewMeshComponent->SetCollisionProfileName(CollisionPresetName);
 
             //set mesh to be movable
             NewMeshComponent->SetMobility(EComponentMobility::Movable);
 
-
             NewMeshComponent->SetupAttachment(ExistingMeshComponent, SocketName); // Attach it to the socket on the existing mesh
             NewMeshComponent->RegisterComponent(); // Register the new component to make it active
 
-
-            spawnedFlag = true;
+            //spawnedFlag = true;
         }
     }
 
-    return spawnedFlag;
+    return NewMeshComponent;
 }
 
 bool ARoomGenerator::SpawnMeshOnExistingMeshWallSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName)

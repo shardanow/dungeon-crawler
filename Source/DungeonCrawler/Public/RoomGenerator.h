@@ -89,6 +89,9 @@ public:
     TArray<UStaticMesh*> FloorPillarsMeshes;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Assets")
+    TArray<UStaticMesh*> FloorDecorationMeshes;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Assets")
     TArray<TSubclassOf<AActor>> FloorDecorationBlueprints;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Chances")
@@ -114,9 +117,9 @@ public:
     void GenerateRoom();
 
     UStaticMeshComponent* SpawnMesh(UStaticMesh* Mesh, FVector Location, FRotator Rotation, FName SocketName);
-    bool SpawnActorOnSocket(TSubclassOf<AActor> ActorClass, UStaticMeshComponent* Mesh, float SpawnChance, FName SocketName);
+    bool SpawnActorOnSocket(TSubclassOf<AActor> ActorClass, UStaticMeshComponent* Mesh, float SpawnChance, FName SocketName, FName CollisionPresetName = "BlockAll");
 
-    bool SpawnMeshOnExistingMeshFloorSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName);
+    UStaticMeshComponent* SpawnMeshOnExistingMeshFloorSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName, FName CollisionPresetName = "BlockAll");
     bool SpawnMeshOnExistingMeshWallSocket(UStaticMesh* NewMesh, UStaticMeshComponent* ExistingMeshComponent, float SpawnChance, FName SocketName);
 
     bool IsFloorCellNearWall(int32 NumWallsLength, int32 NumWallsWidth, FVector FloorPosition, float horizontalProximity);
