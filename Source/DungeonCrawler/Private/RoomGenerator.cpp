@@ -95,8 +95,8 @@ void ARoomGenerator::GenerateRoom(FVector RoomPosition)
 			WallTag = TEXT("WallCorner");
 
 			//draw debug sphere
-			DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength, 0, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
-			DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength + WallLength, RoomWidth, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength, 0, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength + WallLength, RoomWidth, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
 		}
 
 		UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
@@ -149,8 +149,8 @@ void ARoomGenerator::GenerateRoom(FVector RoomPosition)
 			WallTag = TEXT("WallCorner");
 
 			//draw debug sphere
-			DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
-			DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
 		}
 
 		UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
@@ -330,14 +330,14 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 			bool bSomethingSpawnedOppositeWall = false;
 
 			//define tag for the wall mesh component as WallCorner if it is the first or last wall mesh component
-			FName WallTag = TEXT("Wall");
+			FName WallTag = TEXT("WallCorridor");
 			if (i == 0 || i >= (int)(RoomLength / WallLength))
 			{
 				WallTag = TEXT("WallCorner");
 
 				//draw debug sphere
-				DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength, 0, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
-				DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength + WallLength, RoomWidth, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+				//DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength, 0, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+				//DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength + WallLength, RoomWidth, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
 			}
 
 			UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
@@ -376,14 +376,14 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 		bool bSomethingSpawnedOppositeWall = false;
 
 		//define tag for the wall mesh component as WallCorner if it is the first or last wall mesh component
-		FName WallTag = TEXT("Wall");
+		FName WallTag = TEXT("WallCorridor");
 		if (j == 0 || j >= (int)(RoomWidth / WallLength))
 		{
 			WallTag = TEXT("WallCorner");
 
 			//draw debug sphere
-			DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
-			DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			//DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
 		}
 
 		UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];

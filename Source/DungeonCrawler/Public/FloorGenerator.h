@@ -47,6 +47,8 @@ public:
 
 	void FindAndConnectNearestRoom();
 
+	bool CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams);
+
 	void DrawDebugBoxWithFixedSize(FVector Point1, FVector Point2, float WidthExtent, float HeightExtent);
 
 	void CreateConnectionCorridor(FVector Point1, FVector Point2, float WidthExtent, float HeightExtent);
