@@ -32,8 +32,8 @@ void ARoomGenerator::Tick(float DeltaTime)
 void ARoomGenerator::RandomRoomSizeGenerate()
 {
 	// Generate room dimensions based on wall lengths and widths
-	NumWallsLength = FMath::RandRange(MinRoomLength / FloorLength, MaxRoomLength / FloorLength);
-	NumWallsWidth = FMath::RandRange(MinRoomWidth / FloorWidth, MaxRoomWidth / FloorWidth);
+	NumWallsLength = FMath::CeilToInt(FMath::RandRange(MinRoomLength / FloorLength, MaxRoomLength / FloorLength));
+	NumWallsWidth = FMath::CeilToInt(FMath::RandRange(MinRoomWidth / FloorWidth, MaxRoomWidth / FloorWidth));
 
 	RoomLength = NumWallsLength * FloorLength;  // Exact multiple of wall length
 	RoomWidth = NumWallsWidth * FloorWidth;  // Exact multiple of wall width
@@ -230,11 +230,11 @@ void ARoomGenerator::GenerateRoom(FVector RoomPosition)
 
 						// spawn random count of torches on pillar sockets
 						for (int k = 0; k < PillarDecorationSocketNames.Num(); k++) {
-							if (WallTorchesBlueprints.Num() > 0 
-								&& SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], 
-									PillarMeshComponent, 
-									50, 
-									PillarDecorationSocketNames[k], 
+							if (WallTorchesBlueprints.Num() > 0
+								&& SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)],
+									PillarMeshComponent,
+									50,
+									PillarDecorationSocketNames[k],
 									"IgnoreCamera", "Pillar")
 								) {
 								//bSomethingSpawned = true;
@@ -369,51 +369,51 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 	if (DisableWallSide == "Width") {
 
 
-	// Walls along the width of the room
-	for (int j = 0; j <= RoomWidth / WallLength; j++) {
-		//flag to check that something is spawned on current wall socket name
-		bool bSomethingSpawnedWall = false;
-		bool bSomethingSpawnedOppositeWall = false;
+		// Walls along the width of the room
+		for (int j = 0; j <= RoomWidth / WallLength; j++) {
+			//flag to check that something is spawned on current wall socket name
+			bool bSomethingSpawnedWall = false;
+			bool bSomethingSpawnedOppositeWall = false;
 
-		//define tag for the wall mesh component as WallCorner if it is the first or last wall mesh component
-		FName WallTag = TEXT("WallCorridor");
-		if (j == 0 || j >= (int)(RoomWidth / WallLength))
-		{
-			WallTag = TEXT("WallCorner");
+			//define tag for the wall mesh component as WallCorner if it is the first or last wall mesh component
+			FName WallTag = TEXT("WallCorridor");
+			if (j == 0 || j >= (int)(RoomWidth / WallLength))
+			{
+				WallTag = TEXT("WallCorner");
 
-			//draw debug sphere
-			//DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
-			//DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+				//draw debug sphere
+				//DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+				//DrawDebugSphere(GetWorld(), Origin + FVector(RoomLength, j * WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
+			}
+
+			UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
+			FVector WallPosition = Origin + FVector(0, j * WallLength + WallLength, 0); // Subtracting one WallLength
+			UStaticMeshComponent* WallMeshComponent = SpawnMesh(SelectedWallMesh, WallPosition, FRotator(0, -90, 0), TEXT("wall_left_bottom_corner"), WallTag);
+
+			//DrawDebugSphere(GetWorld(), WallPosition, 30, 12, FColor::Blue, true, -1, 0, 2);
+
+
+			UStaticMesh* SelectedOppositeWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
+			FVector OppositeWallPosition = Origin + FVector(RoomLength, j * WallLength, 0);
+			UStaticMeshComponent* OppositeWallMeshComponent = SpawnMesh(SelectedOppositeWallMesh, OppositeWallPosition, FRotator(0, 90, 0), TEXT("wall_right_bottom_corner"), WallTag);
+
+			//DrawDebugSphere(GetWorld(), OppositeWallPosition, 30, 12, FColor::Red, true, -1, 0, 2);
+
+			//debug number of wall meshes and current index
+			UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
+
+
+			// spawn torches on wall sockets
+			if (!bSomethingSpawnedWall && WallTorchesBlueprints.Num() > 0 && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center", "BlockAll", "Light")) {
+				bSomethingSpawnedWall = true;
+				SpawnedWallLightSourcesPositions.Add(WallPosition);
+			}
+
+			if (!bSomethingSpawnedOppositeWall && WallTorchesBlueprints.Num() > 0 && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center", "BlockAll", "Light")) {
+				bSomethingSpawnedOppositeWall = true;
+				SpawnedWallLightSourcesPositions.Add(OppositeWallPosition);
+			}
 		}
-
-		UStaticMesh* SelectedWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
-		FVector WallPosition = Origin + FVector(0, j * WallLength + WallLength, 0); // Subtracting one WallLength
-		UStaticMeshComponent* WallMeshComponent = SpawnMesh(SelectedWallMesh, WallPosition, FRotator(0, -90, 0), TEXT("wall_left_bottom_corner"), WallTag);
-
-		//DrawDebugSphere(GetWorld(), WallPosition, 30, 12, FColor::Blue, true, -1, 0, 2);
-
-
-		UStaticMesh* SelectedOppositeWallMesh = WallMeshes[FMath::RandRange(0, WallMeshes.Num() - 1)];
-		FVector OppositeWallPosition = Origin + FVector(RoomLength, j * WallLength, 0);
-		UStaticMeshComponent* OppositeWallMeshComponent = SpawnMesh(SelectedOppositeWallMesh, OppositeWallPosition, FRotator(0, 90, 0), TEXT("wall_right_bottom_corner"), WallTag);
-
-		//DrawDebugSphere(GetWorld(), OppositeWallPosition, 30, 12, FColor::Red, true, -1, 0, 2);
-
-		//debug number of wall meshes and current index
-		UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
-
-
-		// spawn torches on wall sockets
-		if (!bSomethingSpawnedWall && WallTorchesBlueprints.Num() > 0 && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], WallMeshComponent, WallTorchesSpawnChance, "wall_center", "BlockAll", "Light")) {
-			bSomethingSpawnedWall = true;
-			SpawnedWallLightSourcesPositions.Add(WallPosition);
-		}
-
-		if (!bSomethingSpawnedOppositeWall && WallTorchesBlueprints.Num() > 0 && SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)], OppositeWallMeshComponent, WallTorchesSpawnChance, "wall_center", "BlockAll", "Light")) {
-			bSomethingSpawnedOppositeWall = true;
-			SpawnedWallLightSourcesPositions.Add(OppositeWallPosition);
-		}
-	}
 
 	}
 
@@ -502,7 +502,7 @@ bool ARoomGenerator::SpawnActorOnSocket(TSubclassOf<AActor> ActorClass, UStaticM
 		// Spawn the actor
 		AActor* NewActor = GetWorld()->SpawnActor<AActor>(ActorClass, SpawnLocation, SpawnRotation);
 
-		if(!NewActor)
+		if (!NewActor)
 		{
 			return false;
 		}

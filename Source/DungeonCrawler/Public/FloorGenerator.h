@@ -12,16 +12,18 @@ UCLASS()
 class DUNGEONCRAWLER_API AFloorGenerator : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	AFloorGenerator();
+
+	bool isGenerating = false;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -31,15 +33,7 @@ public:
 
 	FVector CalculateRoomPosition(ARoomGenerator* roomInstance, TArray<FRoomInfo>& existingRooms);
 
-	bool IsPositionValid(const FVector& position, float roomLength, float roomWidth, const TArray<FRoomInfo>& existingRooms);
-
-	bool RoomsOverlap(const FVector& newPos, float newLength, float newWidth, const FVector& existingPos, float existingLength, float existingWidth);
-
 	ARoomGenerator* GenerateRoomAtPosition(ARoomGenerator* roomInstance, FVector position);
-
-	//ARoomGenerator* roomGenerator;
-
-	//ARoomGenerator* corridorGenerator;
 
 	//blueprint callable function
 	UFUNCTION(BlueprintCallable, Category = "Floor Generation")
@@ -47,7 +41,21 @@ public:
 
 	void FindAndConnectNearestRoom();
 
+	bool AreAllRoomsInterconnected();
+
+	void DFS(int roomIndex, TArray<bool>& visited);
+
+	int FindRoomIndexByID(int roomID);
+
+	void FinalizeLevel();
+
 	bool CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams);
+
+	void MovePointAndRetryRoomJoin(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams);
+
+	void JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FVector hitComponentCenterMeshRoomA, FVector hitComponentCenterMeshRoomB, UStaticMeshComponent* hitComponentMeshRoomA, UStaticMeshComponent* hitComponentMeshRoomB);
+
+	void DestroyLevelWithLostRoomJoins();
 
 	void DrawDebugBoxWithFixedSize(FVector Point1, FVector Point2, float WidthExtent, float HeightExtent);
 
