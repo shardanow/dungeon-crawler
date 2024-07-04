@@ -61,8 +61,8 @@ void ARoomGenerator::FixedRoomSizeGenerate(float NewRoomLength, float NewRoomWid
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Room Width: %f"), RoomWidth));
 
 	//debug in console
-	UE_LOG(LogTemp, Warning, TEXT("Room Length: %f"), RoomLength);
-	UE_LOG(LogTemp, Warning, TEXT("Room Width: %f"), RoomWidth);
+	//UE_LOG(LogTemp, Warning, TEXT("Room Length: %f"), RoomLength);
+	//UE_LOG(LogTemp, Warning, TEXT("Room Width: %f"), RoomWidth);
 }
 
 void ARoomGenerator::GenerateRoom(FVector RoomPosition)
@@ -167,7 +167,7 @@ void ARoomGenerator::GenerateRoom(FVector RoomPosition)
 		//DrawDebugSphere(GetWorld(), OppositeWallPosition, 30, 12, FColor::Red, true, -1, 0, 2);
 
 		//debug number of wall meshes and current index
-		UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
+		//UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
 
 
 		// spawn torches on wall sockets
@@ -400,7 +400,7 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 			//DrawDebugSphere(GetWorld(), OppositeWallPosition, 30, 12, FColor::Red, true, -1, 0, 2);
 
 			//debug number of wall meshes and current index
-			UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
+			//UE_LOG(LogTemp, Warning, TEXT("Create Wall Mesh id: %d of: %d"), j, (int)(RoomWidth / WallLength));
 
 
 			// spawn torches on wall sockets

@@ -171,7 +171,6 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 		FRoomInfo& roomInfoA = RoomsData[i];
 		FVector roomCenterA = roomInfoA.RoomPosition + FVector(roomInfoA.RoomInstance->RoomLength / 2, roomInfoA.RoomInstance->RoomWidth / 2, 0);
 
-		FRoomInfo* closestRoom = nullptr;
 		float minDistance = FLT_MAX;
 
 		for (int j = 0; j < RoomsData.Num(); j++) {
@@ -236,11 +235,10 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 
 
 			//debug distance with room name
-			UE_LOG(LogTemp, Warning, TEXT("Distance between %s and %s: %f"), *roomInfoA.RoomInstance->GetName(), *roomInfoB.RoomInstance->GetName(), distance);
+			//UE_LOG(LogTemp, Warning, TEXT("Distance between %s and %s: %f"), *roomInfoA.RoomInstance->GetName(), *roomInfoB.RoomInstance->GetName(), distance);
 
 			if (distance < RoomJoinDistance) {
 				minDistance = distance;
-				closestRoom = &roomInfoB;
 
 
 				//make array of closest rooms and distance
@@ -292,136 +290,196 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 
 						FVector AlignedPointB = GetAlignedPoint(hitFirstComponentCenter, RoomCenterBNew);
 
-						//draw debug arrow
-						DrawDebugDirectionalArrow(GetWorld(), RoomCenterANew, RoomCenterBNew, 120.0f, FColor::Purple, true, -1, 0, 5);
 
 
-						//debug hit point
-						DrawDebugSphere(GetWorld(), intersectionPoint, 50, 20, FColor::Purple, true);
+						bool isValidIntersection = true;
 
 
-
-						if (hitComponentFirst && hitComponentFirst->ComponentHasTag("WallCorner")) {
-							//debug hit component tag with room id and tag
-							UE_LOG(LogTemp, Warning, TEXT("Hit Corner Component %d Tag: %s"), roomInfoA.RoomID, *hitComponentFirst->ComponentTags[0].ToString());
-
-							//MovePointAndRetryRoomJoin(RoomCenterANew, RoomCenterBNew, hitFirstComponentCenter, roomInfoA.RoomInstance, roomInfoB.RoomInstance, CollisionParams);
-
-							////Add the room to the joined rooms list
-							//roomInfoA.isJoined = true;
-							//roomInfoB.isJoined = true;
-							//roomInfoA.joinedRoomIDs.Add(roomInfoB.RoomID);
-							//roomInfoB.joinedRoomIDs.Add(roomInfoA.RoomID);
-
-							continue;
+						if (hitComponentFirst->GetOwner()->GetName() != roomInfoA.RoomInstance->GetName()) {
+							isValidIntersection = false;
 						}
 
 
-						// Check if the hit component is a wall and act accordingly based on the angle to prevent diagonal joins
-						if (hitComponentFirst
-							&& hitComponentFirst->ComponentHasTag("Wall")
-							//&& (angle < 40 || angle > 70)
-							)
-						{
+
+						if (isValidIntersection) {
+
+							//draw debug arrow
+							//DrawDebugDirectionalArrow(GetWorld(), RoomCenterANew, intersectionPoint, 120.0f, FColor::Purple, true, -1, 0, 5);
+
+
+							//debug hit point
+							//DrawDebugSphere(GetWorld(), intersectionPoint, 50, 20, FColor::Purple, true);
 
 
 
-							//new line trace
-							bHit2 = GetWorld()->LineTraceSingleByChannel(OutHit2, hitFirstComponentCenter, AlignedPointB, ECC_Visibility, CollisionParams);
+							FVector HitNormal = OutHit.ImpactNormal;
 
-							if (bHit2) {
-								FVector intersectionPoint2 = OutHit2.ImpactPoint;
-								//get the hit mesh component
-								UStaticMeshComponent* hitComponentSecond = Cast<UStaticMeshComponent>(OutHit2.Component.Get());
+							// Example of setting the correct position and orientation
+							FVector WallStartCorner; // Starting corner based on wall orientation
+							FVector WallEndCorner;   // End corner based on wall orientation
+							float WallWidth = 80.0f; // Assuming 10 units thick
 
-								if (!hitComponentSecond) {
-									continue;
+							//debug HitNormal
+							UE_LOG(LogTemp, Warning, TEXT("HitNormal of room %d is: %s"), roomInfoA.RoomID, *HitNormal.ToString());
+
+							// Detect the wall hit based on HitNormal vector
+							if (FVector::DotProduct(HitNormal, FVector(0, -1, 0)) > 0.9f) {
+								WallStartCorner = FVector(roomInfoA.RoomPosition.X, roomInfoA.RoomPosition.Y + roomInfoA.RoomInstance->RoomWidth, roomInfoA.RoomPosition.Z);
+								WallEndCorner = FVector(roomInfoA.RoomPosition.X + roomInfoA.RoomInstance->RoomLength, roomInfoA.RoomPosition.Y + roomInfoA.RoomInstance->RoomWidth, roomInfoA.RoomPosition.Z);
+
+								// Debug room name and wall side
+								UE_LOG(LogTemp, Warning, TEXT("Top wall hit detected of room %d."), roomInfoA.RoomID);
+								// Debug dot product
+								UE_LOG(LogTemp, Warning, TEXT("Top Dot Product: %f"), FVector::DotProduct(HitNormal, FVector(0, -1, 0)));
+							}
+							else if (FVector::DotProduct(HitNormal, FVector(1, 0, 0)) > 0.9f) {
+								WallStartCorner = FVector(roomInfoA.RoomPosition.X, roomInfoA.RoomPosition.Y, roomInfoA.RoomPosition.Z);
+								WallEndCorner = FVector(roomInfoA.RoomPosition.X, roomInfoA.RoomPosition.Y + roomInfoA.RoomInstance->RoomWidth, roomInfoA.RoomPosition.Z);
+
+								// Debug room name and wall side
+								UE_LOG(LogTemp, Warning, TEXT("Left wall hit detected of room %d."), roomInfoA.RoomID);
+								// Debug dot product
+								UE_LOG(LogTemp, Warning, TEXT("Left Dot Product: %f"), FVector::DotProduct(HitNormal, FVector(1, 0, 0)));
+							}
+							else if (FVector::DotProduct(HitNormal, FVector(-1, 0, 0)) > 0.9f) {
+								WallStartCorner = FVector(roomInfoA.RoomPosition.X + roomInfoA.RoomInstance->RoomLength, roomInfoA.RoomPosition.Y, roomInfoA.RoomPosition.Z);
+								WallEndCorner = FVector(roomInfoA.RoomPosition.X + roomInfoA.RoomInstance->RoomLength, roomInfoA.RoomPosition.Y + roomInfoA.RoomInstance->RoomWidth, roomInfoA.RoomPosition.Z);
+
+								// Debug room name and wall side
+								UE_LOG(LogTemp, Warning, TEXT("Right wall hit detected of room %d."), roomInfoA.RoomID);
+								// Debug dot product
+								UE_LOG(LogTemp, Warning, TEXT("Right Dot Product: %f"), FVector::DotProduct(HitNormal, FVector(-1, 0, 0)));
+							}
+							else if (FVector::DotProduct(HitNormal, FVector(0, 1, 0)) > 0.9f) {
+								WallStartCorner = FVector(roomInfoA.RoomPosition.X, roomInfoA.RoomPosition.Y, roomInfoA.RoomPosition.Z);
+								WallEndCorner = FVector(roomInfoA.RoomPosition.X + roomInfoA.RoomInstance->RoomLength, roomInfoA.RoomPosition.Y, roomInfoA.RoomPosition.Z);
+
+
+								// Debug room name and wall side
+								UE_LOG(LogTemp, Warning, TEXT("Bottom wall hit detected of room %d."), roomInfoA.RoomID);
+								// Debug dot product
+								UE_LOG(LogTemp, Warning, TEXT("Bottom Dot Product: %f"), FVector::DotProduct(HitNormal, FVector(0, 1, 0)));
+							}
+							else {
+								// Debug room name and wall side
+								UE_LOG(LogTemp, Warning, TEXT("No wall hit detected of room %d."), roomInfoA.RoomID);
+								continue;
+							}
+
+							// Set the dimensions correctly based on the wall orientation
+							FVector WallDimensions = FVector((WallEndCorner - WallStartCorner).Size(), WallWidth, roomInfoA.RoomInstance->WallHeight);
+
+							// Calculate the rotation to align with the wall
+							FVector DirectionVector = (WallEndCorner - WallStartCorner).GetSafeNormal();
+							FQuat RotationQuat = FQuat::FindBetweenNormals(FVector::RightVector, DirectionVector);
+
+							// Correct orientation around Z-axis if necessary
+							float ZRotationDegrees = 90.0f; // Example degree for correction, adjust as needed
+							FQuat ZRotation = FQuat(FVector::UpVector, FMath::DegreesToRadians(ZRotationDegrees));
+							RotationQuat *= ZRotation; // Combine the initial rotation with the Z-axis correction
+
+							// Calculate the correct center of the box
+							FVector BoxCenter = WallStartCorner + (WallEndCorner - WallStartCorner) / 2;
+							BoxCenter.Z += roomInfoA.RoomInstance->WallHeight / 2;  // Adjusting height to the middle of the wall
+
+							// Draw the debug box
+							//DrawDebugBox(GetWorld(), BoxCenter, WallDimensions / 2, RotationQuat, FColor::Green, true, -1.0f, 0, 5);
+
+
+							// Define the sweep box for querying mesh components
+							FCollisionShape CollisionShape = FCollisionShape::MakeBox(WallDimensions / 2);
+							TArray<FHitResult> OutHits;
+							FCollisionQueryParams WallBoxCollisionParams(FName(TEXT("MeshQuery")), true, this);
+
+							// Perform the sweep to get potential mesh components
+							bool bHasHit = GetWorld()->SweepMultiByChannel(OutHits, BoxCenter, BoxCenter, RotationQuat, ECC_GameTraceChannel1, CollisionShape, WallBoxCollisionParams);
+
+							TArray<UStaticMeshComponent*> MeshComponentsInsideBox;
+							TArray<FVector> MeshCenters;
+
+							if (bHasHit)
+							{
+								for (const FHitResult& Hit : OutHits)
+								{
+									UStaticMeshComponent* MeshComp = Cast<UStaticMeshComponent>(Hit.Component);
+									if (MeshComp && MeshComp->ComponentHasTag("Wall"))
+									{
+										// Check if the component is truly within the rotated box bounds
+										FBox MeshBox = MeshComp->Bounds.GetBox();
+										FVector MeshCenter = MeshBox.GetCenter();
+
+										//DrawDebugSphere(GetWorld(), MeshCenter, 50, 20, FColor::Red, true);
+
+										// Optional: further refine check for inclusion within the oriented box
+										//if (IsPointInsideOrientedBox(MeshCenter, BoxCenter, WallDimensions / 2, RotationQuat))
+										//{
+										MeshComponentsInsideBox.Add(MeshComp);
+										MeshCenters.Add(MeshCenter);
+										//}
+									}
 								}
-
-								FBoxSphereBounds BoundsSecond = hitComponentSecond->Bounds;
-								FVector hitSecondComponentCenter = BoundsSecond.Origin;
-
-
-								//get join room is valid
-								if (!CheckRoomCorridorJoinIsValid(RoomCenterANew, RoomCenterBNew, hitFirstComponentCenter, roomInfoA.RoomInstance, roomInfoB.RoomInstance, CollisionParams)) {
-									//debug wrong room corridor join for the room
-									UE_LOG(LogTemp, Warning, TEXT("Room Corridor Join is not valid for Room %d and Room %d"), roomInfoA.RoomID, roomInfoB.RoomID);
-
-									//MovePointAndRetryRoomJoin(RoomCenterANew, RoomCenterBNew, hitFirstComponentCenter, roomInfoA.RoomInstance, roomInfoB.RoomInstance, CollisionParams);
-
-									continue;
-								}
-								else {
-									JoinRoomByCorridor(hitFirstComponentCenter, intersectionPoint2, roomInfoA.RoomInstance, roomInfoB.RoomInstance, hitFirstComponentCenter, hitSecondComponentCenter, hitComponentFirst, hitComponentSecond);
-
-
-									//Add the room to the joined rooms list
-									roomInfoA.isJoined = true;
-									roomInfoB.isJoined = true;
-									roomInfoA.joinedRoomIDs.Add(roomInfoB.RoomID);
-									roomInfoB.joinedRoomIDs.Add(roomInfoA.RoomID);
-								}
-
 							}
 
 
+							for (UStaticMeshComponent* MeshComp : MeshComponentsInsideBox)
+							{
+								// Check if the component is truly within the rotated box bounds
+								FBox MeshBox = MeshComp->Bounds.GetBox();
+								FVector MeshCenter = MeshBox.GetCenter();
+
+								FVector AlignedPointRoomB = GetAlignedPoint(MeshCenter, RoomCenterBNew);
+
+								//new line trace
+								bHit2 = GetWorld()->LineTraceSingleByChannel(OutHit2, MeshCenter, AlignedPointRoomB, ECC_Visibility, CollisionParams);
+
+								if (bHit2) {
+									FVector intersectionPoint2 = OutHit2.ImpactPoint;
+									//get the hit mesh component
+									UStaticMeshComponent* hitComponentSecond = Cast<UStaticMeshComponent>(OutHit2.Component.Get());
+
+									if (!hitComponentSecond) {
+										continue;
+									}
+
+									FBoxSphereBounds BoundsSecond = hitComponentSecond->Bounds;
+									FVector hitSecondComponentCenter = BoundsSecond.Origin;
+
+
+									//get join room is valid
+									if (CheckRoomCorridorJoinIsValid(RoomCenterANew, RoomCenterBNew, MeshCenter, roomInfoA.RoomInstance, roomInfoB.RoomInstance, CollisionParams)) {
+										JoinRoomByCorridor(MeshCenter, intersectionPoint2, roomInfoA.RoomInstance, roomInfoB.RoomInstance, MeshCenter, hitSecondComponentCenter, MeshComp, hitComponentSecond);
+
+										//DrawDebugSphere(GetWorld(), MeshCenter, 80, 20, FColor::White, true);
+										//Add the room to the joined rooms list
+										roomInfoA.isJoined = true;
+										roomInfoB.isJoined = true;
+										roomInfoA.joinedRoomIDs.Add(roomInfoB.RoomID);
+										roomInfoB.joinedRoomIDs.Add(roomInfoA.RoomID);
+
+										break;
+									}
+									else {
+										//debug hit point
+										//DrawDebugSphere(GetWorld(), MeshCenter, 100, 20, FColor::Black, true);
+									}
+
+								}
+
+
+							}
 						}
+
 
 
 					}
 				}
 			}
 		}
-
-		if (closestRoom) {
-			//draw debug sphere
-			//DrawDebugSphere(GetWorld(), closestRoom->RoomPosition, 50, 20, FColor::White, true);
-
-			//draw debug arrow
-			//DrawDebugDirectionalArrow(GetWorld(), roomCenterA, closestRoom->RoomPosition, 120.0f, FColor::White, true, -1, 0, 5);
-		}
 	}
 
 
-	// Check connectivity of all rooms
-	if (!AreAllRoomsInterconnected()) {
-		DestroyLevelWithLostRoomJoins();
-	}
-	else {
-		FinalizeLevel();
-	}
 
-
-}
-
-
-
-bool AFloorGenerator::AreAllRoomsInterconnected() {
-	if (RoomsData.Num() == 0) return true;
-
-	// Start DFS from the first room
-	TArray<bool> visited;
-	visited.Init(false, RoomsData.Num());
-	DFS(0, visited);
-
-	// If any room is not visited, then not all rooms are interconnected
-	for (bool isVisited : visited) {
-		if (!isVisited) {
-			return false;
-		}
-	}
-	return true;
-}
-
-void AFloorGenerator::DFS(int roomIndex, TArray<bool>& visited) {
-	visited[roomIndex] = true;
-	FRoomInfo& room = RoomsData[roomIndex];
-	for (int connectedRoomID : room.joinedRoomIDs) {
-		int connectedIndex = FindRoomIndexByID(connectedRoomID);
-		if (connectedIndex != -1 && !visited[connectedIndex]) {
-			DFS(connectedIndex, visited);
-		}
-	}
+	FinalizeLevel();
 }
 
 int AFloorGenerator::FindRoomIndexByID(int roomID) {
@@ -478,8 +536,8 @@ bool AFloorGenerator::CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVe
 		if (hitComponentLeft && hitComponentLeft->GetOwner()->GetFName() != RoomInstanceB->GetName())
 		{
 			//debug arrow for hit point left and right
-			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterLeft, OutHitLeft.ImpactPoint, 120.0f, FColor::Red, true, -1, 0, 5);
-			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterRight, OutHitRight.ImpactPoint, 120.0f, FColor::Red, true, -1, 0, 5);
+			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterLeft, OutHitLeft.ImpactPoint, 120.0f, FColor::Yellow, true, -1, 0, 5);
+			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterRight, OutHitRight.ImpactPoint, 120.0f, FColor::Yellow, true, -1, 0, 5);
 
 
 			//debug left and right hit point
@@ -488,7 +546,7 @@ bool AFloorGenerator::CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVe
 
 
 			//debug hit component name and room name
-			UE_LOG(LogTemp, Warning, TEXT("Hit Component Left Room Name: %s, From Room Name: %s, Target Room Name: %s"), *hitComponentLeft->GetOwner()->GetName(), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
+			//UE_LOG(LogTemp, Warning, TEXT("Hit Component Left Room Name: %s, From Room Name: %s, Target Room Name: %s"), *hitComponentLeft->GetOwner()->GetName(), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
 
 			return false;
 		}
@@ -496,8 +554,8 @@ bool AFloorGenerator::CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVe
 		if (hitComponentRight && hitComponentRight->GetOwner()->GetFName() != RoomInstanceB->GetName())
 		{
 			//debug arrow for hit point left and right
-			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterLeft, OutHitLeft.ImpactPoint, 120.0f, FColor::Red, true, -1, 0, 5);
-			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterRight, OutHitRight.ImpactPoint, 120.0f, FColor::Red, true, -1, 0, 5);
+			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterLeft, OutHitLeft.ImpactPoint, 120.0f, FColor::Magenta, true, -1, 0, 5);
+			//DrawDebugDirectionalArrow(GetWorld(), hitFirstComponentCenterRight, OutHitRight.ImpactPoint, 120.0f, FColor::Magenta, true, -1, 0, 5);
 
 
 			//debug left and right hit point
@@ -505,7 +563,7 @@ bool AFloorGenerator::CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVe
 			//DrawDebugSphere(GetWorld(), OutHitRight.ImpactPoint, 50, 20, FColor::Red, true);
 
 
-			UE_LOG(LogTemp, Warning, TEXT("Hit Component Right Room Name: %s, From Room Name: %s, Target Room Name: %s"), *hitComponentRight->GetOwner()->GetName(), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
+			//UE_LOG(LogTemp, Warning, TEXT("Hit Component Right Room Name: %s, From Room Name: %s, Target Room Name: %s"), *hitComponentRight->GetOwner()->GetName(), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
 			return false;
 		}
 
@@ -526,109 +584,6 @@ bool AFloorGenerator::CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVe
 
 	return true;
 }
-
-//TODO - Work on this method to make it work properly
-void AFloorGenerator::MovePointAndRetryRoomJoin(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams) {
-	// New line trace with space of one wall length
-	FHitResult OutHit;
-
-	// Choose direction
-	FVector CurrentPointDirection = (RoomCenterBPoint - RoomCenterAPoint).GetSafeNormal();
-	FVector AdjustedHitPointCenter;
-
-	// Determine new hit point based on direction
-	if (FMath::Abs(CurrentPointDirection.X) > FMath::Abs(CurrentPointDirection.Y)) {
-		AdjustedHitPointCenter = HitPointCenter - FVector(0, RoomInstanceA->WallLength, 0);
-	}
-	else {
-		AdjustedHitPointCenter = HitPointCenter - FVector(RoomInstanceA->WallLength, 0, 0);
-	}
-
-	// Get array of static meshes near the intersection point
-	TArray<UStaticMeshComponent*> StaticMeshesRoomA = GetStaticMeshesAtPoint(AdjustedHitPointCenter, 150.f, "Wall");
-
-	UStaticMeshComponent* StaticMeshRoomA = nullptr;
-
-	// Go through all static meshes near the intersection
-	for (UStaticMeshComponent* StaticMesh : StaticMeshesRoomA) {
-		// Skip if owner name is not the same as room instance name
-		if (StaticMesh->GetOwner()->GetFName() != RoomInstanceA->GetName()) {
-			continue;
-		}
-
-		// Set the static mesh
-		StaticMeshRoomA = StaticMesh;
-	}
-
-	if (!StaticMeshRoomA) {
-		UE_LOG(LogTemp, Warning, TEXT("No matching static mesh found for RoomInstanceA"));
-		return;
-	}
-
-	FVector AlignedPointB = GetAlignedPoint(AdjustedHitPointCenter, RoomCenterBPoint);
-
-	// Draw debug sphere
-	DrawDebugSphere(GetWorld(), AdjustedHitPointCenter, 50, 20, FColor::Yellow, true);
-
-	// Line trace from hit component center to the room center
-	bool bHit = GetWorld()->LineTraceSingleByChannel(OutHit, AdjustedHitPointCenter, AlignedPointB, ECC_Visibility, CollisionParams);
-
-	if (!bHit) {
-		return;
-	}
-
-	// Get the hit mesh component
-	UStaticMeshComponent* HitComponent = Cast<UStaticMeshComponent>(OutHit.Component.Get());
-
-	if (!HitComponent) {
-		UE_LOG(LogTemp, Warning, TEXT("Hit component is null"));
-		return;
-	}
-
-	if (!HitComponent->ComponentHasTag("Wall") && HitComponent->GetOwner()->GetFName() != RoomInstanceB->GetName()) {
-		DrawDebugSphere(GetWorld(), OutHit.ImpactPoint, 50, 20, FColor::Turquoise, true);
-		return;
-	}
-	else if (HitComponent->ComponentHasTag("WallCorner")) {
-		DrawDebugSphere(GetWorld(), OutHit.ImpactPoint, 50, 20, FColor::Turquoise, true);
-		return;
-	}
-	else {
-		// Ensure the recursion has a termination condition to avoid infinite loops
-		static int recursionDepth = 0;
-		if (++recursionDepth > 10) {
-			UE_LOG(LogTemp, Error, TEXT("Max recursion depth reached"));
-			recursionDepth = 0;
-			return;
-		}
-
-		MovePointAndRetryRoomJoin(RoomCenterAPoint, RoomCenterBPoint, AdjustedHitPointCenter, RoomInstanceA, RoomInstanceB, CollisionParams);
-
-		recursionDepth--;
-	}
-
-	if (!CheckRoomCorridorJoinIsValid(RoomCenterAPoint, RoomCenterBPoint, AdjustedHitPointCenter, RoomInstanceA, RoomInstanceB, CollisionParams)) {
-		UE_LOG(LogTemp, Warning, TEXT("Room Corridor Join is not valid for Room %s and Room %s"), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
-		DrawDebugSphere(GetWorld(), OutHit.ImpactPoint, 50, 20, FColor::Black, true);
-		MovePointAndRetryRoomJoin(RoomCenterAPoint, RoomCenterBPoint, AdjustedHitPointCenter, RoomInstanceA, RoomInstanceB, CollisionParams);
-	}
-	else {
-		DrawDebugSphere(GetWorld(), OutHit.ImpactPoint, 50, 20, FColor::Cyan, true);
-
-		FVector RoomPointA = AdjustedHitPointCenter;
-		FVector RoomPointB = OutHit.ImpactPoint;
-
-		UStaticMeshComponent* StaticMeshRoomB = HitComponent;
-
-		FVector HitComponentCenterMeshRoomA = AdjustedHitPointCenter;
-		FVector HitComponentCenterMeshRoomB = OutHit.ImpactPoint;
-
-		JoinRoomByCorridor(RoomPointA, RoomPointB, RoomInstanceA, RoomInstanceB, HitComponentCenterMeshRoomA, HitComponentCenterMeshRoomB, StaticMeshRoomA, StaticMeshRoomB);
-	}
-
-	return;
-}
-
 
 void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FVector hitComponentCenterMeshRoomA, FVector hitComponentCenterMeshRoomB, UStaticMeshComponent* hitComponentMeshRoomA, UStaticMeshComponent* hitComponentMeshRoomB) {
 	// Calculate the width and height extents of the box
@@ -673,7 +628,7 @@ void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB,
 		Actor->Destroy();
 
 		//debug destroy actor
-		UE_LOG(LogTemp, Warning, TEXT("Actor First Room Destroyed"));
+		//UE_LOG(LogTemp, Warning, TEXT("Actor First Room Destroyed"));
 	}
 
 	//get array of static meshes near the intersection point A
@@ -684,7 +639,7 @@ void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB,
 		StaticMesh->DestroyComponent();
 
 		//debug destroy static mesh
-		UE_LOG(LogTemp, Warning, TEXT("Static Mesh First Room Destroyed"));
+		//UE_LOG(LogTemp, Warning, TEXT("Static Mesh First Room Destroyed"));
 	}
 
 
@@ -696,7 +651,7 @@ void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB,
 		Actor->Destroy();
 
 		//debug destroy actor
-		UE_LOG(LogTemp, Warning, TEXT("Actor Second Room Destroyed"));
+		//UE_LOG(LogTemp, Warning, TEXT("Actor Second Room Destroyed"));
 	}
 
 	//get array of static meshes near the intersection point B
@@ -707,14 +662,14 @@ void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB,
 		StaticMesh->DestroyComponent();
 
 		//debug destroy static mesh
-		UE_LOG(LogTemp, Warning, TEXT("Static Mesh Second Room Destroyed"));
+		//UE_LOG(LogTemp, Warning, TEXT("Static Mesh Second Room Destroyed"));
 	}
 
 
 
 
 	//debug room id
-	UE_LOG(LogTemp, Warning, TEXT("Room %d is joined with Room %d"), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
+	//UE_LOG(LogTemp, Warning, TEXT("Room %d is joined with Room %d"), *RoomInstanceA->GetName(), *RoomInstanceB->GetName());
 
 
 	//// Add the room to the joined rooms list
@@ -723,23 +678,6 @@ void AFloorGenerator::JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB,
 	//roomInfoA.joinedRoomIDs.Add(roomInfoB.RoomID);
 	//roomInfoB.joinedRoomIDs.Add(roomInfoA.RoomID);
 }
-
-
-void AFloorGenerator::DestroyLevelWithLostRoomJoins() {
-
-	for (FRoomInfo& roomInfo : RoomsData) {
-		if (!roomInfo.isJoined) {
-			//debug log destroyed room
-			UE_LOG(LogTemp, Warning, TEXT("Level is destroyed and generated again as %d Room Does not have any join"), roomInfo.RoomID);
-
-			RegenerateFloor();
-
-
-			break;
-		}
-	}
-}
-
 
 void AFloorGenerator::DrawDebugBoxWithFixedSize(FVector Point1, FVector Point2, float WidthExtent, float HeightExtent)
 {
@@ -818,8 +756,6 @@ void AFloorGenerator::CreateConnectionCorridor(FVector Point1, FVector Point2, f
 	// Draw the debug box
 	//DrawDebugBox(GetWorld(), BoxCenterDebug, BoxExtents, Orientation, FColor::White, true, 5.0f, 0, 5.0f);
 }
-
-
 
 
 FVector AFloorGenerator::GetAlignedPoint(const FVector& Origin, const FVector& Target)

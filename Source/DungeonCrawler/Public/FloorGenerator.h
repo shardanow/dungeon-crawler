@@ -41,21 +41,13 @@ public:
 
 	void FindAndConnectNearestRoom();
 
-	bool AreAllRoomsInterconnected();
-
-	void DFS(int roomIndex, TArray<bool>& visited);
-
 	int FindRoomIndexByID(int roomID);
 
 	void FinalizeLevel();
 
 	bool CheckRoomCorridorJoinIsValid(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams);
 
-	void MovePointAndRetryRoomJoin(FVector RoomCenterAPoint, FVector RoomCenterBPoint, FVector HitPointCenter, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FCollisionQueryParams CollisionParams);
-
 	void JoinRoomByCorridor(FVector RoomPointA, FVector RoomPointB, ARoomGenerator* RoomInstanceA, ARoomGenerator* RoomInstanceB, FVector hitComponentCenterMeshRoomA, FVector hitComponentCenterMeshRoomB, UStaticMeshComponent* hitComponentMeshRoomA, UStaticMeshComponent* hitComponentMeshRoomB);
-
-	void DestroyLevelWithLostRoomJoins();
 
 	void DrawDebugBoxWithFixedSize(FVector Point1, FVector Point2, float WidthExtent, float HeightExtent);
 
