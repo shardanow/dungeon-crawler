@@ -27,6 +27,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+    void AudioEnvSettings();
+
     UFUNCTION(BlueprintCallable, Category = "Room Generation")
     void RandomRoomSizeGenerate();
 
@@ -65,7 +67,11 @@ public:
     float RoomLength;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Room Dimensions")
     float RoomWidth;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Room Dimensions")
+    float RoomRadius;
 
+
+    // Variables for room assets
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Assets")
     int32 NumWallsLength;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Assets")
@@ -138,7 +144,10 @@ public:
     float WallDecorationSpawnChance = 10; // Percentage chance to spawn wall decoration
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Chances")
-    float FloorPillarsSpawnChance = 5; // Percentage chance to spawn floor pillars
+    float PillarsSpawnChance = 5; // Percentage chance to spawn floor pillars
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Chances")
+    float PillarsLightSourcesSpawnChance = 15; // Percentage chance to spawn floor pillars
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Chances")
     float FloorDecorationSpawnChance = 15; // Percentage chance to spawn floor decoration
@@ -165,6 +174,4 @@ public:
     void AddPlayerStart(FVector Location);
 
     bool IsTooCloseToOtherLightSources(TArray<FVector> LightSourcesArray, FVector NewPosition, float MinDistance);
-
-
 };

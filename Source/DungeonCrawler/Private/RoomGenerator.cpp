@@ -2,6 +2,8 @@
 
 
 #include "RoomGenerator.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundAttenuation.h"
 
 // Sets default values
 ARoomGenerator::ARoomGenerator()
@@ -29,6 +31,40 @@ void ARoomGenerator::Tick(float DeltaTime)
 
 }
 
+void ARoomGenerator::AudioEnvSettings() {
+
+	//set raidus based on room width and height
+	RoomRadius = FMath::Sqrt(RoomLength * RoomLength + RoomWidth * RoomWidth) / 2.0f;
+
+	//debug log radius
+	UE_LOG(LogTemp, Warning, TEXT("Room Radius: %f"), RoomRadius);
+
+	//get current room audio component
+	UAudioComponent* CurrentRoomAudioComponent = FindComponentByClass<UAudioComponent>();
+
+
+	// Create a new attenuation settings instance
+	USoundAttenuation* NewAttenuation = NewObject<USoundAttenuation>(this);
+	NewAttenuation->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
+	NewAttenuation->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
+	NewAttenuation->Attenuation.AttenuationShapeExtents = FVector(RoomRadius / 2, 0.f, 0.f); // Example extents if needed
+	NewAttenuation->Attenuation.FalloffDistance = RoomRadius / 4; // Set the falloff distance to your desired value
+
+
+	//set room audio component radius
+	if (CurrentRoomAudioComponent) {
+
+		//get center of the room
+		FVector centerOfTheRoom = GetActorLocation() + FVector(RoomLength / 2, RoomWidth / 2, 0);
+
+		//set room audio component location
+		CurrentRoomAudioComponent->SetWorldLocation(centerOfTheRoom);
+
+		//set room audio component new attenuation settings
+		CurrentRoomAudioComponent->AttenuationSettings = NewAttenuation;
+	}
+}
+
 void ARoomGenerator::RandomRoomSizeGenerate()
 {
 	// Generate room dimensions based on wall lengths and widths
@@ -42,6 +78,8 @@ void ARoomGenerator::RandomRoomSizeGenerate()
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Room Length: %f"), RoomLength));
 	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Room Width: %f"), RoomWidth));
 
+	//set audio environment settings
+	AudioEnvSettings();
 
 	//debug in console
 	UE_LOG(LogTemp, Warning, TEXT("Room Length: %f"), RoomLength);
@@ -233,7 +271,7 @@ void ARoomGenerator::GenerateRoom(FVector RoomPosition)
 							if (WallTorchesBlueprints.Num() > 0
 								&& SpawnActorOnSocket(WallTorchesBlueprints[FMath::RandRange(0, WallTorchesBlueprints.Num() - 1)],
 									PillarMeshComponent,
-									50,
+									PillarsLightSourcesSpawnChance,
 									PillarDecorationSocketNames[k],
 									"IgnoreCamera", "Pillar")
 								) {
@@ -333,7 +371,7 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 			FName WallTag = TEXT("WallCorridor");
 			if (i == 0 || i >= (int)(RoomLength / WallLength))
 			{
-				WallTag = TEXT("WallCorner");
+				WallTag = TEXT("WallCorridorCorner");
 
 				//draw debug sphere
 				//DrawDebugSphere(GetWorld(), Origin + FVector(i * WallLength, 0, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
@@ -379,7 +417,7 @@ void ARoomGenerator::GenerateCorridor(FVector CorridorPosition, FName DisableWal
 			FName WallTag = TEXT("WallCorridor");
 			if (j == 0 || j >= (int)(RoomWidth / WallLength))
 			{
-				WallTag = TEXT("WallCorner");
+				WallTag = TEXT("WallCorridorCorner");
 
 				//draw debug sphere
 				//DrawDebugSphere(GetWorld(), Origin + FVector(0, j * WallLength + WallLength, 0), 20, 12, FColor::Yellow, true, -1, 0, 2);
@@ -471,6 +509,9 @@ UStaticMeshComponent* ARoomGenerator::SpawnMesh(UStaticMesh* Mesh, FVector Locat
 	//add tag to the mesh component
 	MeshComp->ComponentTags.Add(TagName);
 
+	// Set cull distance for optimization
+	MeshComp->SetCullDistance(5000.0f);
+
 	//FAttachmentTransformRules::KeepWorldTransform
    // FAttachmentTransformRules::SnapToTargetIncludingScale
 	if (SocketName != NAME_None) {
@@ -550,6 +591,9 @@ UStaticMeshComponent* ARoomGenerator::SpawnMeshOnExistingMeshFloorSocket(UStatic
 			//add tag to the mesh component
 			NewMeshComponent->ComponentTags.Add(TagName);
 
+			// Set cull distance for optimization
+			NewMeshComponent->SetCullDistance(5000.0f);
+
 			//spawnedFlag = true;
 		}
 	}
@@ -600,6 +644,10 @@ bool ARoomGenerator::SpawnMeshOnExistingMeshWallSocket(UStaticMesh* NewMesh, USt
 
 			NewMeshComponent->SetWorldLocation(SocketLocation + Offset);
 			NewMeshComponent->SetWorldRotation(ExistingMeshComponent->GetSocketRotation(SocketName));
+
+
+			// Set cull distance for optimization
+			NewMeshComponent->SetCullDistance(5000.0f);
 
 			spawnedFlag = true;
 		}

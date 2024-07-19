@@ -65,7 +65,7 @@ void AFloorGenerator::GenerateFloor()
 	for (int i = 0; i < numberOfRooms; i++) {
 
 		// debug room number
-		UE_LOG(LogTemp, Warning, TEXT("Generating room %d of %d"), i, numberOfRooms);
+		UE_LOG(LogTemp, Warning, TEXT("Generating room %d of %d"), i+1, numberOfRooms);
 
 		// get the room blueprint and spawn it
 		ARoomGenerator* roomGenerator = GetWorld()->SpawnActor<ARoomGenerator>(RoomBlueprint, FVector::ZeroVector, FRotator::ZeroRotator);
@@ -80,6 +80,22 @@ void AFloorGenerator::GenerateFloor()
 		// Generate room position and create room in the world
 		FVector newRoomPosition = CalculateRoomPosition(roomGenerator, RoomsData);
 		ARoomGenerator* newRoom = GenerateRoomAtPosition(roomGenerator, newRoomPosition);
+
+		if (i == 0)
+		{
+			newRoom->Tags.Add(FName("StartFloorRoom"));
+
+			//debug sphere
+			//DrawDebugSphere(GetWorld(), newRoomPosition, 100, 20, FColor::Blue, true);
+		}
+		else if (i == numberOfRooms - 1)
+		{
+			newRoom->Tags.Add(FName("EndFloorRoom"));
+
+			//debug sphere
+			//DrawDebugSphere(GetWorld(), newRoomPosition, 100, 20, FColor::Red, true);
+		}
+
 
 		// Store room info with ID
 	  //  FIntPoint roomGridPos = FIntPoint(newRoomPosition.X / newRoom->RoomLength, newRoomPosition.Y / newRoom->RoomWidth);
@@ -421,10 +437,15 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 							}
 
 
-							for (UStaticMeshComponent* MeshComp : MeshComponentsInsideBox)
+							int numComponents = MeshComponentsInsideBox.Num(); // Get the number of components in the array
+
+							for (int m = 0; m < numComponents; ++m)
 							{
+
+								UStaticMeshComponent* currentComp = MeshComponentsInsideBox[m]; // Current component
+
 								// Check if the component is truly within the rotated box bounds
-								FBox MeshBox = MeshComp->Bounds.GetBox();
+								FBox MeshBox = currentComp->Bounds.GetBox();
 								FVector MeshCenter = MeshBox.GetCenter();
 
 								FVector AlignedPointRoomB = GetAlignedPoint(MeshCenter, RoomCenterBNew);
@@ -447,7 +468,7 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 
 									//get join room is valid
 									if (CheckRoomCorridorJoinIsValid(RoomCenterANew, RoomCenterBNew, MeshCenter, roomInfoA.RoomInstance, roomInfoB.RoomInstance, CollisionParams)) {
-										JoinRoomByCorridor(MeshCenter, intersectionPoint2, roomInfoA.RoomInstance, roomInfoB.RoomInstance, MeshCenter, hitSecondComponentCenter, MeshComp, hitComponentSecond);
+										JoinRoomByCorridor(MeshCenter, intersectionPoint2, roomInfoA.RoomInstance, roomInfoB.RoomInstance, MeshCenter, hitSecondComponentCenter, currentComp, hitComponentSecond);
 
 										//DrawDebugSphere(GetWorld(), MeshCenter, 80, 20, FColor::White, true);
 										//Add the room to the joined rooms list
@@ -455,6 +476,47 @@ void AFloorGenerator::FindAndConnectNearestRoom() {
 										roomInfoB.isJoined = true;
 										roomInfoA.joinedRoomIDs.Add(roomInfoB.RoomID);
 										roomInfoB.joinedRoomIDs.Add(roomInfoA.RoomID);
+
+
+
+										//get array of static meshes near the intersection point A
+										TArray<UStaticMeshComponent*> StaticMeshesA = GetStaticMeshesAtPoint(MeshCenter, 600.f, "Wall");
+										TArray<UStaticMeshComponent*> StaticMeshesACorners = GetStaticMeshesAtPoint(MeshCenter, 600.f, "WallCorner");
+
+										//join two arrays
+										StaticMeshesA.Append(StaticMeshesACorners);
+
+										//draw debug sphere
+										//DrawDebugSphere(GetWorld(), MeshCenter, 600, 20, FColor::Black, true);
+
+							
+										for (UStaticMeshComponent* StaticMesh : StaticMeshesA) {
+											StaticMesh->SetCollisionProfileName("IgnoreCameraAndCursor");
+
+											StaticMesh->SetMaterial(0, CorridorOverlayMaterial);
+											//debug hit point
+											//DrawDebugSphere(GetWorld(), StaticMesh->GetComponentLocation(), 80, 20, FColor::Blue, true);
+										}
+
+										//get array of static meshes near the intersection point B
+										TArray<UStaticMeshComponent*> StaticMeshesB = GetStaticMeshesAtPoint(hitSecondComponentCenter, 600.f, "Wall");
+										TArray<UStaticMeshComponent*> StaticMeshesBCorners = GetStaticMeshesAtPoint(hitSecondComponentCenter, 600.f, "WallCorner");
+
+										//join two arrays
+										StaticMeshesB.Append(StaticMeshesBCorners);
+
+										
+										for (UStaticMeshComponent* StaticMesh : StaticMeshesB) {
+											StaticMesh->SetCollisionProfileName("IgnoreCameraAndCursor");
+
+											//apply new material to the mesh
+											StaticMesh->SetMaterial(0, CorridorOverlayMaterial);
+
+											//debug hit point
+											//DrawDebugSphere(GetWorld(), StaticMesh->GetComponentLocation(), 80, 20, FColor::Blue, true);
+										}
+
+										//DrawDebugSphere(GetWorld(), hitSecondComponentCenter, 600, 20, FColor::Black, true);
 
 										break;
 									}

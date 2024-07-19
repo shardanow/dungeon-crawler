@@ -89,6 +89,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Join")
 	float RoomJoinDistance;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Room Data")
+	UMaterial* CorridorOverlayMaterial;
+
 
 private:
 	// Grid to track occupied cells
