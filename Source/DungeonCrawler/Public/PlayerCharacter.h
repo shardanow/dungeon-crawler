@@ -33,6 +33,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Damage")
 	bool bIsDamaged;
 
+	// Bool to change when critical damage is taken
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Damage")
+	bool bIsCriticalDamaged;
+
 	// Getter for bIsDamaged
 	// ufunction is used to make the function available to Blueprints
 	UFUNCTION(BlueprintCallable, Category = "Damage")
@@ -42,6 +46,16 @@ public:
 	// ufunction is used to make the function available to Blueprints
 	UFUNCTION(BlueprintCallable, Category = "Damage")
 	void SetIsDamaged(bool IsDamaged) { bIsDamaged = IsDamaged; }
+
+	// Getter for bIsCriticalDamaged
+	// ufunction is used to make the function available to Blueprints
+	UFUNCTION(BlueprintCallable, Category = "Damage")
+	bool IsCriticalDamaged() const { return bIsCriticalDamaged; }
+
+	// Setter for bIsCriticalDamaged
+	// ufunction is used to make the function available to Blueprints
+	UFUNCTION(BlueprintCallable, Category = "Damage")
+	void SetIsCriticalDamaged(bool IsCriticalDamaged) { bIsCriticalDamaged = IsCriticalDamaged; }
 
 	// Function to check if any animation montage is playing
 	// ufunction is used to make the function available to Blueprints

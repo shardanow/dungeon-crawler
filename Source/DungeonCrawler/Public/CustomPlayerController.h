@@ -68,7 +68,8 @@ private:
     float AttackDistance = 150.0f;
     float AttackCooldown = 1.5f;
     float LastAttackTime = 0.0f;
-    float Damage = 30.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage", meta = (AllowPrivateAccess = "true"))
+    float Damage = 1.0f;
 
     // Player state
     //blueprint read write
@@ -81,6 +82,7 @@ private:
 
     AEnemyCharacter* EnemyUnderCursor = nullptr;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy", meta = (AllowPrivateAccess = "true"))
     AEnemyCharacter* LockedEnemy = nullptr;
 
     void OnMousePressed();

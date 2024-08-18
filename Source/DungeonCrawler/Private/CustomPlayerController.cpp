@@ -322,10 +322,12 @@ void ACustomPlayerController::AttackTargetEnemy()
 
                     if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetPawn()))
                     {
+                        //TODO - change IsDamaged to IsCriticalDamaged
                         if (!PlayerCharacter->IsDamaged())
                         {
                             CurrentPathPoints.Empty();
                             OnPlayerAttack.Broadcast(true);
+                            //TODO - Calculate treshold for critical damage
                             LastAttackTime = CurrentTime;
                             GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Enemy Hit Triggered"));
                         }
